@@ -1,0 +1,21 @@
+# IDE
+.idea/
+.vscode/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pytest_cache/
+.coverage
+dist/
+build/
+
+# Venv
+.venv/
+venv/
+env/
+
+# Streamlit cache
+.streamlit/
