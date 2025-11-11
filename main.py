@@ -2,6 +2,7 @@ import streamlit as st
 from dataclasses import dataclass, asdict
 from typing import List, Dict, Optional
 
+
 st.set_page_config(page_title="Tic-Tac-Toe Game", page_icon="🎮", layout="centered")
 
 # ---------------------- Style (Frontend only) ----------------------
@@ -12,7 +13,7 @@ st.markdown(
     '}'
     '.subtitle {text-align:center; color:#6b7280; margin-bottom: 12px;}'
     '.board {max-width: 420px; margin: 0 auto;}'
-    '.board .stButton>button {height: 130; font-size: 36px; font-weight: 700;}'
+    '.board .stButton>button {height: 130px; font-size: 36px; font-weight: 700;}'
     '.topbar {display:flex; gap:10px; justify-content:center; margin: 8px 0 16px;}'
     '.status {text-align:center; font-weight:600; margin: 6px 0 12px;}'
     '.muted {color:#6b7280;}'
@@ -26,7 +27,8 @@ class GameState:
     turn: str # 'X' or 'O'
     game_over: bool # If the game ends
     status_message: str # 'Winner: X', 'Draw', 'Turn: X'
-    scores: Dict[str, int]    # e.g: {'X':int = 3, 'Y':int = 0}
+    scores: Dict[str, int]    # e.g: {'X':int = 3, 'O':int = 0}
+    started: bool # if start game button is pressed
 
 @dataclass
 class Settings:
@@ -45,7 +47,8 @@ def init_session():
     if 'game' not in st.session_state:
         st.session_state.game = GameState(
             board=['']*9, turn='X', game_over=False, status_message='Turn: X',
-            scores={'X':0, 'O':0, 'Draw':0}
+            scores={'X':0, 'O':0, 'Draw':0},
+            started=False,
         )
 
 init_session()
@@ -55,13 +58,25 @@ def apply_settings_hook(s: Settings):
     pass
 
 def start_game_hook():
-    pass
+    st.session_state.game.board = ['']*9
+    st.session_state.game.turn = 'X'
+    st.session_state.game.game_over = False
+    st.session_state.game.started = True
+    st.session_state.game.status_message = 'Turn: X'
+    st.rerun()
+
 
 def new_game_hook():
-    pass
+    st.session_state.game.board = ['']*9
+    st.session_state.game.turn = 'X'
+    st.session_state.game.game_over = False
+    st.session_state.game.started = True
+    st.session_state.game.status_message = 'Turn: X'
+    st.rerun()
 
 def reset_scores_hook():
-    pass
+    st.session_state.game.scores = {'X': 0, 'O': 0, 'Draw': 0}
+    st.rerun()
 
 def cell_click_hook(index: int):
     pass
@@ -69,30 +84,35 @@ def cell_click_hook(index: int):
 
 st.sidebar.header('Settings')
 
+# If game already started and not finished -> Lock the Settings Section
+settings_locked = st.session_state.game.started and not st.session_state.game.game_over
+
 # --- Decision on Player 1 ---
-player1_label = st.sidebar.selectbox('Player 1', ['Computer', 'User'], index=0)
+player1_label = st.sidebar.selectbox('Player 1', ['Computer', 'User'], index=0, disabled=settings_locked)
 player1_mode_val = None
 if player1_label == 'Computer':
     player1_mode_val = st.sidebar.radio(
         'Player 1 Difficulty',
         ['Easy', 'Medium', 'Hard'],
         index=0,
-        horizontal=True
+        horizontal=True,
+        disabled=settings_locked
     )
 
 # --- Decision on Player 2 ---
-player2_label = st.sidebar.selectbox('Player 2', ['Computer', 'User'], index=0)
+player2_label = st.sidebar.selectbox('Player 2', ['Computer', 'User'], index=0, disabled=settings_locked)
 player2_mode_val = None
 if player2_label == 'Computer':
     player2_mode_val = st.sidebar.radio(
         'Player 2 Difficulty',
         ['Easy', 'Medium', 'Hard'],
         index=0,
-        horizontal=True
+        horizontal=True,
+        disabled=settings_locked
     )
 
 # Set new Settings before starting a Game
-if st.sidebar.button('Set New Settings'):
+if st.sidebar.button('Set New Settings', disabled=settings_locked):
     st.session_state.settings = Settings(
         player1=player1_label, player2=player2_label, player1_mode=player1_mode_val, player2_mode=player2_mode_val
     )
@@ -131,11 +151,23 @@ st.divider()
 
 colA, colB, colC = st.columns(3)
 with colA:
-    if st.button('🚀 Start the Game', use_container_width=True):
+    if st.button(
+        '🚀 Start the Game',
+        use_container_width=True,
+        disabled=st.session_state.game.started and not st.session_state.game.game_over
+    ):
         start_game_hook()
 with colB:
-    if st.button('↻ Restart', use_container_width=True):
+    if st.button(
+        '↻ Restart',
+        use_container_width=True,
+        disabled=st.session_state.game.started and not st.session_state.game.game_over
+    ):
         new_game_hook()
 with colC:
-    if st.button('🏁 Reset the Score', use_container_width=True):
+    if st.button(
+        '🏁 Reset the Score',
+        use_container_width=True,
+        disabled=st.session_state.game.started and not st.session_state.game.game_over
+    ):
         reset_scores_hook()
