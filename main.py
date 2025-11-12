@@ -1,6 +1,5 @@
 import streamlit as st
-from dataclasses import dataclass, asdict
-from typing import List, Dict, Optional
+import game
 
 
 st.set_page_config(page_title="Tic-Tac-Toe Game", page_icon="🎮", layout="centered")
@@ -21,71 +20,22 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-@dataclass
-class GameState:
-    board: List[str] # Current state of the board
-    turn: str # 'X' or 'O'
-    game_over: bool # If the game ends
-    status_message: str # 'Winner: X', 'Draw', 'Turn: X'
-    scores: Dict[str, int]    # e.g: {'X':int = 3, 'O':int = 0}
-    started: bool # if start game button is pressed
-
-@dataclass
-class Settings:
-    player1: str # 'Computer' / 'User'
-    player2: str
-    player1_mode: str # 'User' -> None / 'Computer' -> ['Easy', 'Medium', 'Hard']
-    player2_mode: str
-
 
 # ---------------------- Session bootstrap ----------------------
-def init_session():
-    if 'settings' not in st.session_state:
-        st.session_state.settings = Settings(
-            player1='Computer', player2='Computer', player1_mode='Hard', player2_mode='Hard'
-        )
-    if 'game' not in st.session_state:
-        st.session_state.game = GameState(
-            board=['']*9, turn='X', game_over=False, status_message='Turn: X',
-            scores={'X':0, 'O':0, 'Draw':0},
-            started=False,
-        )
 
-init_session()
+if "engine" not in st.session_state:
+    st.session_state.engine = game.Game(game.Settings(
+        player1='Computer', player2='Computer', player1_mode='Hard', player2_mode='Hard'))
 
-# ---------------------- Hooks ----------------------
-def apply_settings_hook(s: Settings):
-    pass
-
-def start_game_hook():
-    st.session_state.game.board = ['']*9
-    st.session_state.game.turn = 'X'
-    st.session_state.game.game_over = False
-    st.session_state.game.started = True
-    st.session_state.game.status_message = 'Turn: X'
-    st.rerun()
+engine: game.Game = st.session_state.engine
 
 
-def new_game_hook():
-    st.session_state.game.board = ['']*9
-    st.session_state.game.turn = 'X'
-    st.session_state.game.game_over = False
-    st.session_state.game.started = True
-    st.session_state.game.status_message = 'Turn: X'
-    st.rerun()
 
-def reset_scores_hook():
-    st.session_state.game.scores = {'X': 0, 'O': 0, 'Draw': 0}
-    st.rerun()
-
-def cell_click_hook(index: int):
-    pass
-
-
+# region Sidebar - Settings
 st.sidebar.header('Settings')
 
 # If game already started and not finished -> Lock the Settings Section
-settings_locked = st.session_state.game.started and not st.session_state.game.game_over
+settings_locked = engine.started and not engine.game_over
 
 # --- Decision on Player 1 ---
 player1_label = st.sidebar.selectbox('Player 1', ['Computer', 'User'], index=0, disabled=settings_locked)
@@ -113,10 +63,11 @@ if player2_label == 'Computer':
 
 # Set new Settings before starting a Game
 if st.sidebar.button('Set New Settings', disabled=settings_locked):
-    st.session_state.settings = Settings(
+    engine.settings = game.Settings(
         player1=player1_label, player2=player2_label, player1_mode=player1_mode_val, player2_mode=player2_mode_val
     )
-    apply_settings_hook(st.session_state.settings)
+
+# endregion
 
 
 
@@ -124,19 +75,19 @@ if st.sidebar.button('Set New Settings', disabled=settings_locked):
 st.markdown("<div class='title'>❌ Tic-Tac-Toe Game ⭕</div>", unsafe_allow_html=True)
 
 # Status Message
-st.markdown(f"<div class='status'>{st.session_state.game.status_message}</div>", unsafe_allow_html=True)
+st.markdown(f"<div class='status'>{engine.status_message}</div>", unsafe_allow_html=True)
 
 # ---------------------- Board ----------------------
 def render_cell(i: int):
-    label = st.session_state.game.board[i] if st.session_state.game.board[i] else ' '
-    def _on_click(idx=i):
-        cell_click_hook(idx)
-        if not st.session_state.game.game_over:
-            if st.session_state.game.board[idx] == '':
-                st.session_state.game.board[idx] = st.session_state.game.turn
-                st.session_state.game.turn = 'O' if st.session_state.game.turn == 'X' else 'X'
-                st.session_state.game.status_message = f"Sıra: {st.session_state.game.turn}"
-    st.button(label, key=f'cell_{i}', on_click=_on_click, use_container_width=True)
+    label = engine.board[i] if engine.board[i] else ' '
+    turn = engine.turn
+    player_dict={'X': engine.settings.player1, 'O': engine.settings.player2}
+    is_user = True if 'User' == player_dict[turn] else False
+    st.button(label, key=f'cell_{i}',
+              disabled = (not engine.started) or engine.game_over
+                         or (not is_user) or (engine.board[i] != ''),
+              use_container_width=True)
+
 
 st.markdown("<div class='board'>", unsafe_allow_html=True)
 for r in range(3):
@@ -147,6 +98,8 @@ for r in range(3):
 
 st.markdown("</div>", unsafe_allow_html=True)
 
+
+# region Start-Restart-Reset Buttons
 st.divider()
 
 colA, colB, colC = st.columns(3)
@@ -154,20 +107,27 @@ with colA:
     if st.button(
         '🚀 Start the Game',
         use_container_width=True,
-        disabled=st.session_state.game.started and not st.session_state.game.game_over
+        disabled=engine.started and not engine.game_over
     ):
-        start_game_hook()
+        engine.start_game(); st.rerun()
 with colB:
     if st.button(
         '↻ Restart',
         use_container_width=True,
-        disabled=st.session_state.game.started and not st.session_state.game.game_over
+        disabled=engine.started and not engine.game_over
     ):
-        new_game_hook()
+        engine.restart_game(); st.rerun()
 with colC:
     if st.button(
         '🏁 Reset the Score',
         use_container_width=True,
-        disabled=st.session_state.game.started and not st.session_state.game.game_over
+        disabled=engine.started and not engine.game_over
     ):
-        reset_scores_hook()
+        engine.reset_scores(); st.rerun()
+
+# endregion
+
+
+# ------------- Game Stream -------------
+if engine.started and not engine.game_over:
+    pass
