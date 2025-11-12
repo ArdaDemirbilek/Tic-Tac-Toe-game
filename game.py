@@ -21,14 +21,21 @@ class Game:
         self.scores: Dict[str, int] = {'X': 0, 'O': 0, 'Draw': 0}
         self.started: bool = False
 
+    # (+)
     def start_game(self):
         self.started = True
 
+    # (+)
     def restart_game(self):
-        pass
+        self.board: List[str] = [''] * 9
+        self.turn: str = 'X'
+        self.game_over: bool = False
+        self.status_message: str = "Press Start"
+        self.started: bool = False
 
+    # (+)
     def reset_scores(self):
-        pass
+        self.scores: Dict[str, int] = {'X': 0, 'O': 0, 'Draw': 0}
 
     # (+)
     def make_move(self, index: int):

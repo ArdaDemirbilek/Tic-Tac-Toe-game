@@ -1,5 +1,9 @@
+from time import sleep
+
 import streamlit as st
+import time
 import game
+
 
 
 st.set_page_config(page_title="Tic-Tac-Toe Game", page_icon="🎮", layout="centered")
@@ -95,7 +99,7 @@ for r in range(3):
             cell_index = r * 3 + c
             if render_cell(cell_index):
                 engine.make_move(cell_index)
-                # engine.check_winner()
+                engine.check_winner()
                 if not engine.game_over:
                     engine.swap_turn()
                 st.rerun()
@@ -141,4 +145,5 @@ if engine.started and not engine.game_over and current_player_type == 'Computer'
     engine.check_winner()
     if not engine.game_over:
         engine.swap_turn()
+    sleep(1)
     st.rerun()
