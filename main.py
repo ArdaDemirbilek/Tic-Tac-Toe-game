@@ -22,14 +22,12 @@ st.markdown(
 
 
 # ---------------------- Session bootstrap ----------------------
-
 if "engine" not in st.session_state:
     st.session_state.engine = game.Game(game.Settings(
         player1='Computer', player2='Computer', player1_mode='Hard', player2_mode='Hard'))
-
 engine: game.Game = st.session_state.engine
 
-
+player_dict = {'X': engine.settings.player1, 'O': engine.settings.player2}
 
 # region Sidebar - Settings
 st.sidebar.header('Settings')
@@ -81,12 +79,12 @@ st.markdown(f"<div class='status'>{engine.status_message}</div>", unsafe_allow_h
 def render_cell(i: int):
     label = engine.board[i] if engine.board[i] else ' '
     turn = engine.turn
-    player_dict={'X': engine.settings.player1, 'O': engine.settings.player2}
     is_user = True if 'User' == player_dict[turn] else False
-    st.button(label, key=f'cell_{i}',
-              disabled = (not engine.started) or engine.game_over
-                         or (not is_user) or (engine.board[i] != ''),
-              use_container_width=True)
+    clicked = st.button(label, key=f'cell_{i}',
+                  disabled = (not engine.started) or engine.game_over
+                             or (not is_user) or (engine.board[i] != ''),
+                  use_container_width=True)
+    return clicked
 
 
 st.markdown("<div class='board'>", unsafe_allow_html=True)
@@ -94,7 +92,14 @@ for r in range(3):
     cols = st.columns(3, gap='small')
     for c in range(3):
         with cols[c]:
-            render_cell(r*3+c)
+            cell_index = r * 3 + c
+            if render_cell(cell_index):
+                engine.make_move(cell_index)
+                # engine.check_winner()
+                if not engine.game_over:
+                    engine.swap_turn()
+                st.rerun()
+
 
 st.markdown("</div>", unsafe_allow_html=True)
 
@@ -129,5 +134,11 @@ with colC:
 
 
 # ------------- Game Stream -------------
-if engine.started and not engine.game_over:
-    pass
+current_player_type = player_dict[engine.turn]
+if engine.started and not engine.game_over and current_player_type == 'Computer':
+    move_index = engine.computer_move()
+    engine.make_move(move_index)
+    engine.check_winner()
+    if not engine.game_over:
+        engine.swap_turn()
+    st.rerun()
