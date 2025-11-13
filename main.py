@@ -71,6 +71,25 @@ if st.sidebar.button('Set New Settings', disabled=settings_locked):
 # Title of the Page
 st.markdown("<div class='title'>❌ Tic-Tac-Toe Game ⭕</div>", unsafe_allow_html=True)
 
+# ---------------------- Scoreboard ----------------------
+_, col_x, col_draw, col_o, _ = st.columns([1, 2, 2, 2, 0.5])
+
+# Score of Player X
+with col_x:
+    player_x_name = engine.settings.player1
+    st.metric(label=f"❌ Player X ({player_x_name})", value=engine.scores['X'])
+
+# Draw
+with col_draw:
+    st.metric(label="🤝 Draws", value=engine.scores['Draw'])
+
+# Score of Player O
+with col_o:
+    player_o_name = engine.settings.player2
+    st.metric(label=f"⭕ Player O ({player_o_name})", value=engine.scores['O'])
+
+st.divider()
+
 # Status Message
 st.markdown(f"<div class='status'>{engine.status_message}</div>", unsafe_allow_html=True)
 
