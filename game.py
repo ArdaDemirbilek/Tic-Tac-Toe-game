@@ -1,8 +1,7 @@
-from dataclasses import dataclass
 from typing import List, Dict
 import random
 
-@dataclass
+
 class Settings:
     """
     Dataclass to store the game settings (who is user, who is computer,
