@@ -97,7 +97,6 @@ class Game:
             chosen_square = random.choice(available_squares)
             return chosen_square
 
-
         elif player_mode == 'Medium':
             # If the difficulty is medium, the computer can prevent one-move-losers and
             # don't overlook one-move-winners, otherwise it decides randomly
@@ -131,12 +130,68 @@ class Game:
                 return random.choice(available_squares)
             return None
 
-
         else:
-            # If the difficulty is hard, the computer always finds the best move possible
-            # and that leads at worst scenario for the computer to a draw
-            # That made to be possible using Minimax Algorithm
-            return None
+            # --- HARD MODE: SMART MINIMAX (Depth-Weighted) ---
+            player_mark = 'X' if self.turn == 'X' else 'O' # for maximizing
+            opponent_mark = 'O' if player_mark == 'X' else 'X' # for minimizing
+
+            def check_sim_winner(current_board):
+                """
+                A helper function which returns the result of the game. Since check_winner is
+                a class function, it cannot be used
+                """
+                winning_combos = ((0, 1, 2), (3, 4, 5), (6, 7, 8),
+                                  (0, 3, 6), (1, 4, 7), (2, 5, 8),
+                                  (0, 4, 8), (2, 4, 6))
+                for i, j, k in winning_combos:
+                    if current_board[i] == current_board[j] == current_board[k] and current_board[i] != '':
+                        return current_board[i]
+                if '' not in current_board:
+                    return 'Draw'
+                return None
+
+            def minimax(board_state, depth, is_maximizing):
+                """
+                Recursive Minimax algorithm with depth-weighting optimization. It simulates all possible
+                future moves to determine the optimal score, prioritizing faster wins and delayed losses.
+                :return: The calculated heuristic score for the given board state.
+                 """
+                result = check_sim_winner(board_state)
+                if result == player_mark: return 10 - depth # if current player is winning
+                if result == opponent_mark: return -10 + depth # if current player is losing
+                if result == 'Draw': return 0 # draw
+
+                if is_maximizing:
+                    best_score = -float('inf')
+                    for i in range(9):
+                        if board_state[i] == '':
+                            board_state[i] = player_mark
+                            score = minimax(board_state, depth+1, False)
+                            board_state[i] = ''
+                            best_score = max(score, best_score)
+                    return best_score # highest score
+
+                else:
+                    best_score = float('inf')
+                    for i in range(9):
+                        if board_state[i] == '':
+                            board_state[i] = opponent_mark
+                            score = minimax(board_state, depth+1, True)
+                            board_state[i] = ''
+                            best_score = min(score, best_score)
+                    return best_score # lowest score
+
+            best_final_score = -float('inf')
+            best_move = -1
+            for i in range(9):
+                if self.board[i] == '': # Try possible outcomes if it is available
+                    self.board[i] = player_mark
+                    move_score = minimax(self.board, 0, False)
+                    self.board[i] = '' # After trying turn it back to its previous state
+                    if move_score > best_final_score:
+                        best_final_score = move_score
+                        best_move = i
+            return best_move
 
 
     def check_winner(self):
@@ -162,7 +217,9 @@ class Game:
             self.game_over = True
             self.status_message = f"🏆 Winner: {winner}!"
             self.scores[winner] += 1
+            return winner
         elif '' not in self.board: # If there is no winner and the board is full -> Draw:
             self.game_over = True
             self.status_message = "🤝 Draw!"
             self.scores['Draw'] += 1
+        return None
